@@ -9,6 +9,7 @@ from encoder import MultiVocabularyEncoder, special_chars, load_encoder
 from eval import eval_morpheme_glosses, eval_word_glosses
 from datasets import DatasetDict
 from typing import Optional
+import yaml
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
@@ -79,35 +80,31 @@ def create_trainer(model: RobertaForTokenClassification, dataset: Optional[Datas
     return trainer
 
 
-languages = {
-    'arp': 'Arapaho',
-    'git': 'Gitksan',
-    'lez': 'Lezgi',
-    'nyb': 'Nyangbo',
-    'ddo': 'Tsez',
-    'usp': 'Uspanteko'
-}
-
 
 @click.command()
 @click.argument('mode')
+@click.option("--config", help="Path to YAML config file", type=str, default="2023glossingST_config.yaml")
 @click.option("--lang", help="Which language to train", type=str, required=True)
 @click.option("--track", help="[closed, open] whether to use morpheme segmentation", type=str, required=True)
 @click.option("--pretrained_path", help="Path to pretrained model", type=click.Path(exists=True))
 @click.option("--encoder_path", help="Path to pretrained encoder", type=click.Path(exists=True))
 @click.option("--data_path", help="The dataset to run predictions on. Only valid in predict mode.", type=click.Path(exists=True))
-def main(mode: str, lang: str, track: str, pretrained_path: str, encoder_path: str, data_path: str):
+def main(mode: str, config: str, lang: str, track: str, pretrained_path: str, encoder_path: str, data_path: str):
+
+    with open(config) as f:
+        config = yaml.safe_load(f)
+
     if mode == 'train':
         # Change entity name to your wandb username
-        wandb.init(project="igt-generation", entity="michael-ginn")
+        wandb.init(project=config["wandb"]["project"], entity=config["wandb"]["entity"])
 
     MODEL_INPUT_LENGTH = 512
 
     is_open_track = track == 'open'
     print("IS OPEN", is_open_track)
 
-    train_data = load_data_file(f"../../data/{languages[lang]}/{lang}-train-track{'2' if is_open_track else '1'}-uncovered")
-    dev_data = load_data_file(f"../../data/{languages[lang]}/{lang}-dev-track{'2' if is_open_track else '1'}-uncovered")
+    train_data = load_data_file(f"../../data/{config['languages'][lang]}/{lang}-train-track{'2' if is_open_track else '1'}-uncovered")
+    dev_data = load_data_file(f"../../data/{config['languages'][lang]}/{lang}-dev-track{'2' if is_open_track else '1'}-uncovered")
 
     print("Preparing datasets...")
 

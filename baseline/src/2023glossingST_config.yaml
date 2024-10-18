@@ -1,0 +1,11 @@
+wandb:
+  project: igt-generation
+  entity: michael-ginn
+
+languages:
+  arp: Arapaho
+  git: Gitksan
+  lez: Lezgi
+  nyb: Nyangbo
+  ddo: Tsez
+  usp: Uspanteko
