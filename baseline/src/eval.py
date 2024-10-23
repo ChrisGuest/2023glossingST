@@ -2,7 +2,7 @@
 
 from typing import List
 from data import IGTLine, load_data_file
-from torchtext.data.metrics import bleu_score
+from torchtext_metrics import bleu_score
 import click
 import json
 
