@@ -113,7 +113,7 @@ def main(mode: str, config: str, lang: str, track: str, pretrained_path: str, en
     if mode == 'train':
         encoder = create_encoder(train_data, tokenizer=tokenizer, threshold=1,
                                  model_type=ModelType.TOKEN_CLASS, split_morphemes=is_open_track)
-        encoder.save()
+        encoder.save(f"encoder_data.{lang}.pkl")
         dataset = DatasetDict()
         dataset['train'] = prepare_dataset(data=train_data, tokenizer=tokenizer, encoder=encoder,
                                            model_input_length=MODEL_INPUT_LENGTH, model_type=ModelType.TOKEN_CLASS, device=device)
@@ -124,9 +124,9 @@ def main(mode: str, config: str, lang: str, track: str, pretrained_path: str, en
 
         print("Training...")
         trainer.train()
-        print("Saving model to ./output")
-        trainer.save_model('./output')
-        print("Model saved at ./output")
+        print(f"Saving model to ./output.{lang}")
+        trainer.save_model(f'./output.{lang}')
+        print(f"Model saved at ./output.{lang}")
     elif mode == 'predict':
         encoder = load_encoder(encoder_path)
         if not hasattr(encoder, 'segmented'):

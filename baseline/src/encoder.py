@@ -92,9 +92,9 @@ class MultiVocabularyEncoder:
     def vocab_size(self):
         return len(self.all_vocab)
 
-    def save(self):
+    def save(self, filename='encoder_data.pkl'):
         """Saves the encoder to a file"""
-        with open('encoder_data.pkl', 'wb') as out:
+        with open(filename, 'wb') as out:
             pickle.dump(self, out, pickle.HIGHEST_PROTOCOL)
 
 
