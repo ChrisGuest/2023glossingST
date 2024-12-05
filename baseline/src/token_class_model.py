@@ -24,6 +24,7 @@ def create_model(encoder: MultiVocabularyEncoder, sequence_length):
     )
     model = RobertaForTokenClassification(config)
     print(model.config)
+    print(f"returning model to {device}")
     return model.to(device)
 
 
@@ -94,9 +95,11 @@ def main(mode: str, config: str, lang: str, track: str, pretrained_path: str, en
     with open(config) as f:
         config = yaml.safe_load(f)
 
+    """
     if mode == 'train':
         # Change entity name to your wandb username
         wandb.init(project=config["wandb"]["project"], entity=config["wandb"]["entity"])
+    """
 
     MODEL_INPUT_LENGTH = 512
 
@@ -119,6 +122,7 @@ def main(mode: str, config: str, lang: str, track: str, pretrained_path: str, en
                                            model_input_length=MODEL_INPUT_LENGTH, model_type=ModelType.TOKEN_CLASS, device=device)
         dataset['dev'] = prepare_dataset(data=dev_data, tokenizer=tokenizer, encoder=encoder,
                                          model_input_length=MODEL_INPUT_LENGTH, model_type=ModelType.TOKEN_CLASS, device=device)
+        print("train / dev datasets assigned to {device}")
         model = create_model(encoder=encoder, sequence_length=MODEL_INPUT_LENGTH)
         trainer = create_trainer(model, dataset=dataset, encoder=encoder, batch_size=16, lr=2e-5, max_epochs=80)
 
