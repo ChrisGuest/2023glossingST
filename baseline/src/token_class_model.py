@@ -95,11 +95,9 @@ def main(mode: str, config: str, lang: str, track: str, pretrained_path: str, en
     with open(config) as f:
         config = yaml.safe_load(f)
 
-    """
-    if mode == 'train':
+    if mode == 'train' or mode == 'trainpredict':
         # Change entity name to your wandb username
         wandb.init(project=config["wandb"]["project"], entity=config["wandb"]["entity"])
-    """
 
     MODEL_INPUT_LENGTH = 512
 
@@ -143,7 +141,39 @@ def main(mode: str, config: str, lang: str, track: str, pretrained_path: str, en
         trainer = create_trainer(model, dataset=None, encoder=encoder, batch_size=16, lr=2e-5, max_epochs=50)
         preds = trainer.predict(test_dataset=predict_data).predictions
         write_predictions(data_path, lang=lang, preds=preds, pred_input_data=predict_data, encoder=encoder, from_vocabulary_index=2)
+    elif mode == 'trainpredict':
 
+        # train
+        encoder = create_encoder(train_data, tokenizer=tokenizer, threshold=1,
+                                 model_type=ModelType.TOKEN_CLASS, split_morphemes=is_open_track)
+        encoder.save(f"encoder_data.{lang}.pkl")
+        dataset = DatasetDict()
+        dataset['train'] = prepare_dataset(data=train_data, tokenizer=tokenizer, encoder=encoder,
+                                           model_input_length=MODEL_INPUT_LENGTH, model_type=ModelType.TOKEN_CLASS, device=device)
+        dataset['dev'] = prepare_dataset(data=dev_data, tokenizer=tokenizer, encoder=encoder,
+                                         model_input_length=MODEL_INPUT_LENGTH, model_type=ModelType.TOKEN_CLASS, device=device)
+        print(f"train / dev datasets assigned to {device}")
+        model = create_model(encoder=encoder, sequence_length=MODEL_INPUT_LENGTH)
+        trainer = create_trainer(model, dataset=dataset, encoder=encoder, batch_size=16, lr=2e-5, max_epochs=80)
+
+        print("Training...")
+        trainer.train()
+        print(f"Saving model to ./output.{lang}")
+        trainer.save_model(f'./output.{lang}')
+        print(f"Model saved at ./output.{lang}")
+
+        # predict
+        # encoder = load_encoder(encoder_path)
+        if not hasattr(encoder, 'segmented'):
+            encoder.segmented = is_open_track
+        print("ENCODER SEGMENTING INPUT: ", encoder.segmented)
+        predict_data = load_data_file(data_path)
+        predict_data = prepare_dataset(data=predict_data, tokenizer=tokenizer, encoder=encoder,
+                                       model_input_length=MODEL_INPUT_LENGTH, model_type=ModelType.TOKEN_CLASS, device=device)
+        # model = RobertaForTokenClassification.from_pretrained(pretrained_path)
+        trainer = create_trainer(model, dataset=None, encoder=encoder, batch_size=16, lr=2e-5, max_epochs=50)
+        preds = trainer.predict(test_dataset=predict_data).predictions
+        write_predictions(data_path, lang=lang, preds=preds, pred_input_data=predict_data, encoder=encoder, from_vocabulary_index=2)
 
 if __name__ == "__main__":
     main()
