@@ -1,5 +1,9 @@
 import torch
-from transformers import RobertaForTokenClassification, RobertaConfig, TrainingArguments, Trainer
+from transformers import (
+        GPT2ForTokenClassification, GPT2Config,
+        ModernBertForTokenClassification, ModernBertConfig,
+        RobertaForTokenClassification, RobertaConfig,
+        TrainingArguments, Trainer)
 import click
 import numpy as np
 import wandb
@@ -8,7 +12,7 @@ from custom_tokenizers import tokenizers
 from encoder import MultiVocabularyEncoder, special_chars, load_encoder
 from eval import eval_morpheme_glosses, eval_word_glosses
 from datasets import DatasetDict
-from typing import Optional
+from typing import Optional, Union
 import yaml
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
@@ -16,19 +20,39 @@ device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
 def create_model(encoder: MultiVocabularyEncoder, sequence_length):
     print("Creating model...")
-    config = RobertaConfig(
-        vocab_size=encoder.vocab_size(),
-        max_position_embeddings=sequence_length,
-        pad_token_id=encoder.PAD_ID,
-        num_labels=len(encoder.vocabularies[2]) + len(special_chars)
-    )
-    model = RobertaForTokenClassification(config)
+    if arch=='gpt2':
+        config = GPT2Config(
+            vocab_size=encoder.vocab_size(),
+            max_position_embeddings=sequence_length,
+            pad_token_id=encoder.PAD_ID,
+            num_labels=len(encoder.vocabularies[2]) + len(special_chars)
+        )
+        model = GPT2ForTokenClassification(config)
+    elif arch=='modernbert':
+        config = ModernBertConfig(
+            vocab_size=encoder.vocab_size(),
+            max_position_embeddings=sequence_length,
+            pad_token_id=encoder.PAD_ID,
+            num_labels=len(encoder.vocabularies[2]) + len(special_chars)
+        )
+        model = ModernBertForTokenClassification(config)
+    elif arch=='roberta':
+        config = RobertaConfig(
+            vocab_size=encoder.vocab_size(),
+            max_position_embeddings=sequence_length,
+            pad_token_id=encoder.PAD_ID,
+            num_labels=len(encoder.vocabularies[2]) + len(special_chars)
+        )
+        model = RobertaForTokenClassification(config)
+
     print(model.config)
     print(f"assigning model to {device}")
     return model.to(device)
 
 
-def create_trainer(model: RobertaForTokenClassification, dataset: Optional[DatasetDict], encoder: MultiVocabularyEncoder, batch_size, lr, max_epochs):
+def create_trainer(
+        model: Union[GPT2ForTokenClassification, ModernBertForTokenClassification, RobertaForTokenClassification],
+        dataset: Optional[DatasetDict], encoder: MultiVocabularyEncoder, batch_size, lr, max_epochs):
     print("Creating trainer...")
 
     def compute_metrics(eval_preds):
@@ -85,6 +109,9 @@ def create_trainer(model: RobertaForTokenClassification, dataset: Optional[Datas
 @click.command()
 @click.argument('mode')
 @click.option("--config", help="Path to YAML config file", type=str, default="2023glossingST_config.yaml")
+@click.option('--arch', type=click.Choice(['gpt2', 'modernbert', 'roberta'], case_sensitive=False),
+              default='roberta',
+              help='Model architecture')
 @click.option("--lang", help="Which language to train", type=str, required=True)
 @click.option("--track", help="[closed, open] whether to use morpheme segmentation", type=str, required=True)
 @click.option("--pretrained_path", help="Path to pretrained model", type=click.Path(exists=True))
