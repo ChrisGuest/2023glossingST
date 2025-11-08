@@ -18,7 +18,7 @@ import yaml
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
 
-def create_model(encoder: MultiVocabularyEncoder, sequence_length):
+def create_model(arch: str, encoder: MultiVocabularyEncoder, sequence_length):
     print("Creating model...")
     if arch=='gpt2':
         config = GPT2Config(
@@ -81,7 +81,7 @@ def create_trainer(
 
     args = TrainingArguments(
         output_dir=f"../training-checkpoints",
-        evaluation_strategy="epoch",
+        eval_strategy="epoch",
         learning_rate=lr,
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
@@ -117,7 +117,7 @@ def create_trainer(
 @click.option("--pretrained_path", help="Path to pretrained model", type=click.Path(exists=True))
 @click.option("--encoder_path", help="Path to pretrained encoder", type=click.Path(exists=True))
 @click.option("--data_path", help="The dataset to run predictions on. Only valid in predict mode.", type=click.Path(exists=True))
-def main(mode: str, config: str, lang: str, track: str, pretrained_path: str, encoder_path: str, data_path: str):
+def main(mode: str, config: str, arch: str, lang: str, track: str, pretrained_path: str, encoder_path: str, data_path: str):
 
     with open(config) as f:
         config = yaml.safe_load(f)
@@ -150,7 +150,7 @@ def main(mode: str, config: str, lang: str, track: str, pretrained_path: str, en
         dataset['dev'] = prepare_dataset(data=dev_data, tokenizer=tokenizer, encoder=encoder,
                                          model_input_length=MODEL_INPUT_LENGTH, model_type=ModelType.TOKEN_CLASS, device=device)
         print(f"train / dev datasets assigned to {device}")
-        model = create_model(encoder=encoder, sequence_length=MODEL_INPUT_LENGTH)
+        model = create_model(arch=arch, encoder=encoder, sequence_length=MODEL_INPUT_LENGTH)
         trainer = create_trainer(model, dataset=dataset, encoder=encoder, batch_size=16, lr=2e-5, max_epochs=80)
 
         print("Training...")
