@@ -1,5 +1,6 @@
 from pathlib import Path
 import pickle
+import yaml
 
 import click
 
@@ -20,8 +21,8 @@ def main(encoder_data_pkl: str):
                 SEP_ID = obj.SEP_ID,
                 BOS_ID = obj.BOS_ID,
                 EOS_ID = obj.EOS_ID,
-                vocabulary=obj.vocabulary,
-            ), f)
+                vocabulary=obj.vocabularies,
+            ), f, allow_unicode=True)
 
 if __name__ == "__main__":
     main()
