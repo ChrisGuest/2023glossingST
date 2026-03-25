@@ -1,9 +1,14 @@
 import torch
+# from torch.nn import LSTM
 from transformers import (
         GPT2ForTokenClassification, GPT2Config,
         ModernBertForTokenClassification, ModernBertConfig,
         RobertaForTokenClassification, RobertaConfig,
+        # xLSTMForTokenClassification, xLSTMConfig,
         TrainingArguments, Trainer)
+from _fairseq.models.fairseq_encoder import FairseqEncoder
+from _fairseq.models.fairseq_decoder import FairseqDecoder
+from _fairseq.models.fairseq_model import FairseqEncoderDecoderModel
 import click
 import numpy as np
 import wandb
@@ -44,7 +49,15 @@ def create_model(arch: str, encoder: MultiVocabularyEncoder, sequence_length):
             num_labels=len(encoder.vocabularies[2]) + len(special_chars)
         )
         model = RobertaForTokenClassification(config)
-
+    elif arch=='lstmed':
+        # config = xLSTMConfig()
+        # vocab_size
+        # --dropout 0.2
+        encoder = FairseqEncoder()
+        decoder = FairseqDecoder()
+        FairseqEncoderDecoderModel(encoder, decoder)
+        # parser = argparse.ArgumentParser(description='LSTM Model')
+        # model = LSTMModel.add_args(parser)
     print(model.config)
     print(f"assigning model to {device}")
     return model.to(device)
@@ -109,7 +122,7 @@ def create_trainer(
 @click.command()
 @click.argument('mode')
 @click.option("--config", help="Path to YAML config file", type=str, default="2023glossingST_config.yaml")
-@click.option('--arch', type=click.Choice(['gpt2', 'modernbert', 'roberta'], case_sensitive=False),
+@click.option('--arch', type=click.Choice(['gpt2', 'modernbert', 'roberta', 'lstmed'], case_sensitive=False),
               default='roberta',
               help='Model architecture')
 @click.option("--lang", help="Which language to train", type=str, required=True)
