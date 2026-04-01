@@ -1,19 +1,32 @@
-import torch
-from transformers import (
-        GPT2ForTokenClassification, GPT2Config,
-        ModernBertForTokenClassification, ModernBertConfig,
-        RobertaForTokenClassification, RobertaConfig,
-        TrainingArguments, Trainer)
+from eval import eval_morpheme_glosses, eval_word_glosses
+from typing import Optional, Union
+import sys
+
 import click
 import numpy as np
-import wandb
+import yaml
+
+if sys.version_info >= (3, 12):
+    import torch
+    from transformers import (
+            GPT2ForTokenClassification, GPT2Config,
+            ModernBertForTokenClassification, ModernBertConfig,
+            RobertaForTokenClassification, RobertaConfig,
+            TrainingArguments, Trainer)
+    import wandb
+    arch_choices = ['gpt2', 'modernbert', 'roberta']
+else: 
+    
+    from fairseq.models.fairseq_encoder import FairseqEncoder
+    from fairseq.models.fairseq_decoder import FairseqDecoder
+    from fairseq.models.fairseq_model import FairseqEncoderDecoderModel
+    arch_choices = ['lstmed']
+
+
 from data import prepare_dataset, load_data_file, create_encoder, write_predictions, ModelType
 from custom_tokenizers import tokenizers
 from encoder import MultiVocabularyEncoder, special_chars, load_encoder
-from eval import eval_morpheme_glosses, eval_word_glosses
 from datasets import DatasetDict
-from typing import Optional, Union
-import yaml
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
@@ -44,7 +57,15 @@ def create_model(arch: str, encoder: MultiVocabularyEncoder, sequence_length):
             num_labels=len(encoder.vocabularies[2]) + len(special_chars)
         )
         model = RobertaForTokenClassification(config)
-
+    elif arch=='lstmed':
+        # config = xLSTMConfig()
+        # vocab_size
+        # --dropout 0.2
+        encoder = FairseqEncoder()
+        decoder = FairseqDecoder()
+        FairseqEncoderDecoderModel(encoder, decoder)
+        # parser = argparse.ArgumentParser(description='LSTM Model')
+        # model = LSTMModel.add_args(parser)
     print(model.config)
     print(f"assigning model to {device}")
     return model.to(device)
@@ -109,9 +130,8 @@ def create_trainer(
 @click.command()
 @click.argument('mode')
 @click.option("--config", help="Path to YAML config file", type=str, default="2023glossingST_config.yaml")
-@click.option('--arch', type=click.Choice(['gpt2', 'modernbert', 'roberta'], case_sensitive=False),
-              default='roberta',
-              help='Model architecture')
+@click.option('--arch', type=click.Choice(arch_choices, case_sensitive=False),
+              default=arch_choices[-1], help='Model architecture')
 @click.option("--lang", help="Which language to train", type=str, required=True)
 @click.option("--track", help="[closed, open] whether to use morpheme segmentation", type=str, required=True)
 @click.option("--pretrained_path", help="Path to pretrained model", type=click.Path(exists=True))
