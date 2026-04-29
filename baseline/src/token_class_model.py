@@ -5,22 +5,23 @@ import sys
 import click
 import numpy as np
 import yaml
+import torch
+from lstm import BiLSTMModel as BiLSTMForTokenClassification
+import wandb
 
 if sys.version_info >= (3, 12):
-    import torch
     from transformers import (
             GPT2ForTokenClassification, GPT2Config,
             ModernBertForTokenClassification, ModernBertConfig,
             RobertaForTokenClassification, RobertaConfig,
             TrainingArguments, Trainer)
-    import wandb
-    arch_choices = ['gpt2', 'modernbert', 'roberta']
+    arch_choices = ['gpt2', 'modernbert', 'roberta', 'bilstm']
 else: 
-    
-    from fairseq.models.fairseq_encoder import FairseqEncoder
-    from fairseq.models.fairseq_decoder import FairseqDecoder
-    from fairseq.models.fairseq_model import FairseqEncoderDecoderModel
-    arch_choices = ['lstmed']
+    from transformers import (
+            RobertaForTokenClassification, RobertaConfig,
+            TrainingArguments, Trainer)
+    GPT2ForTokenClassification=ModernBertForTokenClassification=None 
+    arch_choices = ['roberta', 'bilstm']
 
 
 from data import prepare_dataset, load_data_file, create_encoder, write_predictions, ModelType
@@ -57,22 +58,21 @@ def create_model(arch: str, encoder: MultiVocabularyEncoder, sequence_length):
             num_labels=len(encoder.vocabularies[2]) + len(special_chars)
         )
         model = RobertaForTokenClassification(config)
-    elif arch=='lstmed':
-        # config = xLSTMConfig()
-        # vocab_size
-        # --dropout 0.2
-        encoder = FairseqEncoder()
-        decoder = FairseqDecoder()
-        FairseqEncoderDecoderModel(encoder, decoder)
-        # parser = argparse.ArgumentParser(description='LSTM Model')
-        # model = LSTMModel.add_args(parser)
+    elif arch=='bilstm':
+        model = BiLSTMForTokenClassification(
+            vocab_size=encoder.vocab_size(),
+            embedding_dim=sequence_length,
+            padding_idx=encoder.PAD_ID
+        )
+
     print(model.config)
     print(f"assigning model to {device}")
     return model.to(device)
 
 
 def create_trainer(
-        model: Union[GPT2ForTokenClassification, ModernBertForTokenClassification, RobertaForTokenClassification],
+        model: Union[GPT2ForTokenClassification, ModernBertForTokenClassification, RobertaForTokenClassification,
+                     BiLSTMForTokenClassification],
         dataset: Optional[DatasetDict], encoder: MultiVocabularyEncoder, batch_size, lr, max_epochs):
     print("Creating trainer...")
 
