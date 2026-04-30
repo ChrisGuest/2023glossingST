@@ -31,6 +31,10 @@ class BiLSTMModel(nn.Module):
     def __init__(self, vocab_size, embedding_dim, padding_idx, hidden_dim=10):
         super().__init__()
         self.hidden_dim = hidden_dim
+        self.config = dict(vocab_size=vocab_size,
+                           embedding_dim=embedding_dim,
+                           padding_idx=padding_idx,
+                           hidden_dim=hidden_dim)
         num_classes = 1
         self.embedding  = nn.Embedding(vocab_size, embedding_dim, padding_idx=padding_idx)
         self.lstm_layer = nn.LSTM(embedding_dim, hidden_dim, bidirectional=True, batch_first=True)
