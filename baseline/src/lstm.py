@@ -28,8 +28,9 @@ class SimpleLSTMNetwork(nn.Module):
 
 class BiLSTMModel(nn.Module):
 
-    def __init__(self, vocab_size, embedding_dim, padding_idx):
+    def __init__(self, vocab_size, embedding_dim, padding_idx, hidden_dim=10):
         super().__init__()
+        self.hidden_dim = hidden_dim
         num_classes = 1
         self.embedding  = nn.Embedding(vocab_size, embedding_dim, padding_idx=padding_idx)
         self.lstm_layer = nn.LSTM(embedding_dim, hidden_dim, bidirectional=True, batch_first=True)
@@ -37,8 +38,8 @@ class BiLSTMModel(nn.Module):
 
     def init_hidden(self, batch_size):
         ''' Initializes hidden state '''
-        h0 = torch.zeros((2, batch_size, hidden_dim)).to(device)
-        c0 = torch.zeros((2, batch_size, hidden_dim)).to(device)
+        h0 = torch.zeros((2, batch_size, self.hidden_dim)).to(device)
+        c0 = torch.zeros((2, batch_size, self.hidden_dim)).to(device)
         hidden = (h0, c0)
         return hidden
 
